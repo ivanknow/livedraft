@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title></title>
+
+<script
+	src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+<script type="text/javascript">
+var appReader = {
+		heigth:"300",
+		width:"300",
+		offset:10,
+		strokeWidth:"1",
+		strokeColor:"black",
+		canvasId:"board",
+		ctx:null,
+		strokes:new Array(),
+		init:function(canvasId,strokes){
+			appReader.canvasId = canvasId;
+			appReader.strokes = strokes;
+			var c = document.getElementById(appReader.canvasId);
+			appReader.ctx = c.getContext("2d"); 	
+		},
+		draw:function(){
+
+			for(var i = 0;i<appReader.strokes.length;i++){
+							
+				appReader.drawStroke(appReader.strokes[i]);
+			}
+		},
+		drawStroke:function(stroke){
+			appReader.printFirstPoint(stroke[0]);
+			
+			for(var i = 1;i<stroke.length;i++){
+				
+				appReader.printPoint(stroke[i]);
+			}
+			
+			appReader.endStroke();
+			
+		},
+		printPoint:function(point){
+			appReader.ctx.lineTo(point.x - appReader.offset, point.y - appReader.offset);
+			appReader.ctx.stroke();
+		},
+		printFirstPoint:function(point){
+			appReader.ctx.moveTo(point.x - appReader.offset, point.y - appReader.offset);
+		},
+		strokeLog:function(){
+			
+			console.log(JSON.stringify(appReader.strokes));
+			
+		},
+		endStroke:function(){
+			appReader.ctx.stroke();	
+			app.strokes = new Array();
+		}
+		
+};
+
+var app = {
+	heigth:"300",
+	width:"300",
+	offset:10,
+	strokeWidth:"1",
+	strokeColor:"black",
+	canvasId:"board",
+	ctx:null,
+	cursorDown:false,
+	strokes:new Array(),
+	currentPoints:null,
+	startDraft:function(e){
+		//create a new arry of points
+		app.currentPoints = new Array();
+		//save initial points
+		app.currentPoints.push({x:e.pageX,y:e.pageY});
+		//draw in canvas
+		app.ctx.moveTo(e.pageX - app.offset, e.pageY - app.offset);
+		//change flag
+		app.cursorDown = true;
+		
+	},
+	finishDraft:function(){
+		//save a stroke
+		app.strokes.push(app.currentPoints);
+		//change flag to false (stop draw)
+		app.cursorDown = false;
+		//ends stroke
+		app.ctx.stroke();
+		//show what is stored in stroke atribute
+		//app.strokeLog();
+		app.save();
+		app.clear();
+	},
+	draft:function(e){
+		//save points
+		app.currentPoints.push({x:e.pageX,y:e.pageY});
+		
+		//draw in canvas
+		app.ctx.lineTo(e.pageX - app.offset, e.pageY - app.offset);
+		app.ctx.stroke();
+	},
+	
+	strokeLog:function(){
+
+		console.log(JSON.stringify(app.strokes));
+		
+	},
+	startCanvasObject:function(){
+		var c = document.getElementById(app.canvasId);
+		app.ctx = c.getContext("2d"); 
+		//app.ctx.lineWidth = 15;
+		
+	},
+	init:function(canvasId){
+		app.canvasId = canvasId;
+		app.startCanvasObject();
+		//events
+		$('#'+app.canvasId).hover(function(e) {
+			if (app.cursorDown) {
+				app.draft(e);
+			}
+		}, function() {
+			if (app.cursorDown) {
+			app.finishDraft();
+			}
+		});
+		$('#'+app.canvasId).mousemove(function(e) {
+			if (app.cursorDown) {
+				app.draft(e);
+			}
+		});
+		
+		$('#'+app.canvasId).mousedown(function(e) {
+			app.startDraft(e);
+		}).mouseup(function() {
+			app.finishDraft();
+		});
+		
+	},
+	clear:function(){
+		//TODO: doesnt work
+		app.startCanvasObject();
+		app.strokes = new Array();
+	},
+	save:function(){
+		
+		 $.ajax({
+             type:"POST",
+             url:"../code/escreve.php",
+             data:"opt=W&writer=a&reader=b&points="+JSON.stringify(app.strokes)+"\n,",
+             success: function(response) {
+                    console.log("enviado");
+             }
+     });
+    
+
+	}
+	
+}
+
+	$(function() {
+		app.init("board");
+		$('#btnDraw').click(function(){
+		//	alert("do da magic");
+			appReader.init("board2",app.strokes);
+			app.strokes = new Array();
+			appReader.draw();
+		});
+	});
+</script>
+<style type="text/css" media="all">
+#board {
+	cursor: crosshair;
+	width: 300px;
+	height: 300px;
+	border: 1px solid #bfbfbf;
+}
+</style>
+</head>
+<body>
+
+	<canvas id="board" width="300" height="300"
+		style="border: 1px solid #d3d3d3;">
+
+
+
+Your browser does not support the HTML5 canvas tag.
+
+
+
+</canvas>
+<button id="btnDraw"> Send</button>
+
+
+	<canvas id="board2" width="300" height="300"
+		style="border: 1px solid #d3d3d3;">
+
+
+
+Your browser does not support the HTML5 canvas tag.
+
+
+
+</canvas>
+<button id="btnDraw"> Recive</button>
+
+<pre id="mostra2"></pre>
+
+</body>
+</html>
